@@ -19,109 +19,176 @@ __mtime__ = '2019/7/16'
                ┃┫┫  ┃┫┫
                ┗┻┛  ┗┻┛
 """
+from graphBase import GraphBase
 from node import Node
+from edge import Edge
 
 
-class Graph:
-    def __init__(self):
-        self.nodes = dict()
+class Graph(GraphBase):
+    def __init__(self, directed=False, weighted=False):
+        super().__init__(directed, weighted)
 
-    def add_node(self, id):
-        if id not in self.nodes.keys():
-            new_node = Node(id)
-            self.nodes[id] = new_node
+    def add_node(self, value):
+        try:
+            new_node = Node(value)
+            self.nodes[value] = new_node
             return new_node
-        else:
-            print("Node already exits.")
+        except:
+            print("Invalid vertex id '{}', may be exits.".format(value))
 
-    def add_node_object(self, node):
-        if node not in self.nodes:
-            self.nodes[node.node_id] = node
-            return node
-        else:
-            print("Node already exits.")
-
-    def disable_all(self):
-        """ Disable all nodes in graph
-            Useful for switching on small subnetworks
-            of bayesian nets
-        """
-        for k, v in iter(self.nodes):
-            v.disable()
-
-    def reset(self):
-        """ Reset messages to original state
-        """
-        for k, v in iter(self.nodes):
-            v.reset()
+    def add_nodes(self, node_list):
+        for node_name in node_list:
+            new_node = Node(node_name)
+            try:
+                self.nodes[node_name] = new_node
+            except:
+                print("Invalid vertex id '{}', may be exits.".format(node_name))
 
     def add_edge(self, sour, terg):
-        if terg not in self.nodes[sour].neighbors:
-            self.nodes[sour].neighbors.append(terg)
-            print("Add edge to node {}, e: {} -> {}".format(sour, sour, terg))
-        else:
+        try:
+            if not self.weighted:
+                new_edge = Edge(False, sour, terg)
+                self.edges.append(new_edge)
+                self.update(new_edge)
+        except:
             print("The edge already exits.")
 
-    def __iter__(self):
-        print("Number of node: {}.".format(self.nodes.__len__()))
+    def add_weight_edge(self, weight, sour, terg):
+        try:
+            if self.weighted:
+                new_edge = Edge(weight, sour, terg)
+                self.edges.append(new_edge)
+                self.update(new_edge)
+        except:
+            print("The edge already exits.")
+
+    def add_edges(self, edges):
+        """ Example to [(from, to)]
+        """
+        for edge in edges:
+            try:
+                if not self.weighted:
+                    new_edge = Edge(False, edge[0], edge[1])
+                    self.edges.append(new_edge)
+                    self.update(new_edge)
+            except:
+                print("The edge already exits.")
+
+    def update(self, edge):
+        self.nodes.get(edge.head).indegree += 1
+        self.nodes.get(edge.tail).outdegree += 1
+        self.nodes.get(edge.tail).nexts.append(edge.head)
+        self.nodes.get(edge.tail).edges.append(edge)
+
+    def subgraph(self, nodes):
+        """ Here nodes is list about node's value.
+        """
+        new_graph = Graph()
+        for node_key in nodes:
+            node = self.nodes.get(node_key)
+            neighbors = list(set(node.nexts).intersection(set(nodes)))
+            node.nexts = neighbors
+            new_graph.nodes[node_key] = node
+        return new_graph
+
+    def jaccard_coefficient(self, node1, node2):
+        """ This coefficient use to measure the ratio between the number of two node's
+            common neighbors and them total neighbors.
+        """
+        first_node = self.nodes.get(node1).nexts
+        second_node = self.nodes.get(node2).nexts
+        common_friends = list(set(first_node).intersection(set(second_node)))
+        return common_friends.__len__() / (first_node.__len__() + second_node.__len__())
+
+    def total_neighbors(self,node1, node2):
+        """ If node1 and node2 are exits, them total neighbors are the add between the
+            node1 and node2.
+        """
+        first_node = self.nodes.get(node1).nexts
+        second_node = self.nodes.get(node2).nexts
+        return first_node.__len__() + second_node.__len__()
+
+    def preference_attachment(self, node1, node2):
+        """ the probability that two users yield an association in certain period of
+            time is proportional to the product of the number of one user's neighborhoods
+            and that of another's neighborhoods.
+        """
+        first_node = self.nodes.get(node1).nexts
+        second_node = self.nodes.get(node2).nexts
+        return first_node.__len__() * second_node.__len__()
+
+    def friend_measure(self, node1, node2):
+        """ the more connections their neighborhoods have with each other, the higher the
+            chances the two users are connected in a social network.
+        """
+        first_node = self.nodes.get(node1).nexts
+        second_node = self.nodes.get(node2).nexts
+        F_fm = 0
+        for node_key in first_node:
+            x_node = self.nodes.get(node_key)
+            for node_key_sec in second_node:
+                #y_node = self.nodes.get(node_key_sec)
+                if node_key is not node_key_sec and node_key_sec not in x_node.nexts:
+                    F_fm +=1
+        return F_fm
 
 
-def SCC(sour, targ, graph):
+def SCC_graph(graph):
     """ calculate the number of strongly connected components within neighborhood-subgraph.
         First generate 1-dimensional neighborhood-subgraph with source and target node.
+
+        a sample of graph, use dict to store graph.
+        G = {
+            'a': {'b', 'c'},
+            'b': {'d', 'e', 'i'},
+            'c': {'d'},
+            'd': {'a', 'h'},
+            'e': {'f'},
+            'f': {'g'},
+            'g': {'e', 'h'},
+            'h': {'i'},
+            'i': {'h'}
+        }
     """
-    neighborhood_graph = graph()
-    neighborhood_graph.add_node(sour)
-    neighborhood_graph.add_node(targ)
-    # add nodes
-    for node in graph[sour].neighbors:
-        if node not in neighborhood_graph.nodes:
-            neighborhood_graph.add_node_object(node)
-    for node in graph[targ].neighbors:
-        if node not in neighborhood_graph.nodes:
-            neighborhood_graph.add_node_object(node)
-    # add edges, check out each node from source graph to estimate whether exits edge among them.
-    for node in neighborhood_graph.nodes.keys():
-        for nei in neighborhood_graph[node].neighbors:
-            if nei not in neighborhood_graph.nodes.keys():
-                del nei
+    nodes = graph.nodes
 
     # reverse graph
-    def reverse_graph(subgraph):
+    def reverse_graph(nodes):
         re_graph = dict()
-        for key in subgraph.keys():
-            re_graph[key] = subgraph.get(key, set())
+
+        for key in nodes.keys():
+            re_graph[key] = nodes.get(key, set())
         # reverse edge
-        for key in subgraph.keys():
-            for nei in subgraph[key]:
-                re_graph[nei].neighbors.add(key)
+        for key in nodes.keys():
+            for nei in nodes[key].nexts:
+                re_graph[nei].nexts.append(key)
         return re_graph
 
     # gain a sequence sorted by time
-    def topo_sort(subgraph):
+    def topo_sort(nodes):
         res = []
         S = set()
 
         # Depth-first traversal/search
-        def dfs(subgraph, u):
+        def dfs(nodes, u):
             if u in S:
                 return
             S.add(u)
-            for v in subgraph[u].neighbors:
+            for v in nodes[u].nexts:
                 if v in S:
                     continue
-                dfs(subgraph, v)
+                dfs(nodes, v)
             res.append(u)
 
         # check each node was leave out
-        for u in subgraph.keys():
-            dfs(subgraph, u)
+        for u in nodes.keys():
+            dfs(nodes, u)
 
         res.reverse()
         return res
 
     # gain singe strongly connected components with assigns start node
-    def walk(subgraph, s, S=None):
+    def walk(nodes, s, S=None):
         if S is None:
             s = set()
         Q = []
@@ -130,7 +197,7 @@ def SCC(sour, targ, graph):
         P[s] = None
         while Q:
             u = Q.pop()
-            for v in subgraph[u].neighbors:
+            for v in nodes[u].nexts:
                 if v in P.keys() or v in S:
                     continue
                 Q.append(v)
@@ -141,8 +208,8 @@ def SCC(sour, targ, graph):
     seen = set()
     # to store scc
     scc = []
-    GT = reverse_graph(neighborhood_graph)
-    for u in topo_sort(neighborhood_graph):
+    GT = reverse_graph(nodes)
+    for u in topo_sort(nodes):
         if u in seen:
             continue
         C = walk(GT, u, seen)

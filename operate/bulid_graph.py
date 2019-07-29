@@ -9,6 +9,8 @@ import igraph as ig
 import csv
 import numpy as np
 import pandas as pd
+from SCC import SCC
+
 
 # graph = ig.Graph.Read_Edgelist("../dataset/digg_friends.csv", directed=False)
 # neighbors = graph.neighborhood()
@@ -24,8 +26,6 @@ import pandas as pd
 
 
 # read file use pandas
-
-
 def convert_currency(value):
     """
     convert chars to float
@@ -37,34 +37,40 @@ def convert_currency(value):
         return 0
 
 
-data_file_pd = pd.read_csv("../dataset/testdata.csv", usecols=(0, 2, 3), header=None)
-data_file_pd.apply(convert_currency)
+data_file_pd = pd.read_csv("../dataset/digg_friends_format.csv", usecols=(0, 2, 3), header=None)
+# data_file_pd.apply(convert_currency)
 # The file use to write extracted features.
 output_file = open("../dataset/digg_friends_features.csv", 'w')
 csv_write = csv.writer(output_file, dialect='excel')
 
-graph = ig.Graph()
-vertices = []
+vertices = set()
 edges = []
 
-nodes1 = data_file_pd[2].tolist()
-nodes2 = data_file_pd[3].tolist()
-# print(list(sorted(set(nodes1+nodes2))))
-vertices = list(sorted(set(nodes1+nodes2)))
-# for line in csv_read_file:
-#     if line[2] not in vertices:
-#         vertices.append(line[2])
-#     if line[3] not in vertices:
-#         vertices.append(line[3])
-#     if line[0] is 1 or '1':
-#         edges.append((line[2], line[3]))
-
 for index, row in data_file_pd.iterrows():
-    if row[0] is 1 or '1':
-        edges.append((row[2], row[3]))
+    edges.append((row[2], row[3]))
 
-graph.add_vertices(vertices)
-graph.add_edges(edges)
+
+# graph.add_vertices(list(vertices))
+# graph.add_edges(edges)
+graph = ig.Graph.TupleList(edges,directed=False, vertex_name_attr='name', edge_attrs=None, weights=False)
+# SCCs = {}
+# for ver in graph.vs:
+#     subgraph = graph.subgraph(graph.neighbors(ver))
+#     temp_graph = {}
+#     for p in subgraph.vs:
+#         temp_graph[p["name"]] = subgraph.neighbors(p)
+#     for key in temp_graph.keys():
+#         nei = []
+#         for id in temp_graph[key]:
+#             nei.append(subgraph.vs[id]["name"])
+#         temp_graph[key] = nei
+#     print(temp_graph)
+#     SCCs[ver["name"]] = SCC(temp_graph).__len__()
 numbers = graph.indegree()
-print(numbers)
-graph.write_svg("tempSVG.svg")
+for index, row in data_file_pd.iterrows():
+    # feature: is-friend,in-degree,
+    csv_write.writerow([row[0], numbers[row[3]]])
+graph.neighbors(5)
+vertic = graph.get
+graph.subgraph(5)
+print("Write over.")
