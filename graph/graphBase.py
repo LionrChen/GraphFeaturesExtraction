@@ -87,5 +87,10 @@ class GraphBase(object):
             if index is 9:
                 break
 
+    def reset_edges(self):
+        self.edges = []
+        for key in self.nodes.keys():
+            self.nodes.get(key).reset_attr()
+
     def subgraph(self, nodes):
         pass

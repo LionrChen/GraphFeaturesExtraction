@@ -85,8 +85,8 @@ class Graph(GraphBase):
         """
         new_graph = Graph()
         for node_key in nodes:
-            node = self.nodes.get(node_key)
-            neighbors = list(set(node.nexts).intersection(set(nodes)))
+            node = Node(self.nodes.get(node_key).value)
+            neighbors = list(set(self.nodes.get(node_key).nexts).intersection(set(nodes)))
             node.nexts = neighbors
             new_graph.nodes[node_key] = node
         return new_graph
@@ -98,14 +98,18 @@ class Graph(GraphBase):
         first_node = self.nodes.get(node1).nexts
         second_node = self.nodes.get(node2).nexts
         common_friends = list(set(first_node).intersection(set(second_node)))
-        return common_friends.__len__() / (first_node.__len__() + second_node.__len__())
+        division = first_node.__len__() + second_node.__len__()
+        if division is not 0:
+            return format(common_friends.__len__() / division, '.6f')
 
-    def total_neighbors(self,node1, node2):
+    def total_neighbors(self, node1, node2):
         """ If node1 and node2 are exits, them total neighbors are the add between the
             node1 and node2.
         """
         first_node = self.nodes.get(node1).nexts
         second_node = self.nodes.get(node2).nexts
+        print("The number of total neighbors of Node {} and {} is {}.".format(node1, node2,
+                                                                              first_node.__len__() + second_node.__len__()))
         return first_node.__len__() + second_node.__len__()
 
     def preference_attachment(self, node1, node2):
@@ -115,6 +119,8 @@ class Graph(GraphBase):
         """
         first_node = self.nodes.get(node1).nexts
         second_node = self.nodes.get(node2).nexts
+        print("The score of preference attachment of Node {} and {} is {}.".format(node1, node2,
+                                                                                   first_node.__len__() * second_node.__len__()))
         return first_node.__len__() * second_node.__len__()
 
     def friend_measure(self, node1, node2):
@@ -127,9 +133,10 @@ class Graph(GraphBase):
         for node_key in first_node:
             x_node = self.nodes.get(node_key)
             for node_key_sec in second_node:
-                #y_node = self.nodes.get(node_key_sec)
+                # y_node = self.nodes.get(node_key_sec)
                 if node_key is not node_key_sec and node_key_sec not in x_node.nexts:
-                    F_fm +=1
+                    F_fm += 1
+        print("The score of friend measure of Node {} and {} is {}.".format(node1, node2, F_fm))
         return F_fm
 
 
@@ -157,7 +164,9 @@ def SCC_graph(graph):
         re_graph = dict()
 
         for key in nodes.keys():
-            re_graph[key] = nodes.get(key, set())
+            node = nodes.get(key)
+            node.reset_attr()
+            re_graph[key] = node
         # reverse edge
         for key in nodes.keys():
             for nei in nodes[key].nexts:
@@ -216,4 +225,6 @@ def SCC_graph(graph):
         seen.update(C)
         scc.append(sorted(list(C.keys())))
 
-    print(scc)
+    print("The number of strongly connected components of graph is {}.".format(scc.__len__()))
+
+    return scc

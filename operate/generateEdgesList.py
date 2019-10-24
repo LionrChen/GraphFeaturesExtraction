@@ -7,14 +7,19 @@
 
 import csv
 
-# origin file
-data_file = open("../dataset/digg_friends.csv", 'r')
-csv_read_file = csv.reader(data_file)
-
-# The file use to write extracted features.
-output_file = open("../dataset/digg_friends_format.csv", 'w')
-csv_write = csv.writer(output_file, dialect='excel')
-
-for line in csv_read_file:
-    if line[2] and line[3] is not None:
-        csv_write.writerow(line)
+# # origin file
+# data_file = open("../dataset/digg_friends.csv", 'r')
+# csv_read_file = csv.reader(data_file)
+#
+# # The file use to write extracted features.
+# output_file = open("../dataset/digg_friends_format.csv", 'w')
+# csv_write = csv.writer(output_file, dialect='excel')
+#
+# for line in csv_read_file:
+#     if line[2] and line[3] is not None:
+#         csv_write.writerow(line)
+data_file = open("../dataset/testdata.csv", 'r')
+for line in data_file.readlines():
+    line = line.strip("\n")
+    print(line.split(","))
+    print(type(line))

@@ -65,3 +65,9 @@ class Node(object):
         self.outdegree = outdegree
         self.nexts = nexts
         self.edges = edges
+
+    def reset_attr(self):
+        self.indegree = 0
+        self.outdegree = 0
+        self.nexts = []
+        self.edges = []
