@@ -9,6 +9,23 @@ import networkx as nx
 import csv
 import numpy as np
 import pandas as pd
+from multiprocessing import Pool
+
+
+def fun(graph, index, node, nbr, weight):
+    # feature: is-friend, in-degree, SCC, total-friends, Jaccard-coefficient, preference-attachment, friend-measure
+    in_d = in_degree(graph, node, nbr)
+    SCC = scc(graph, node, nbr)
+    tf = total_friends(graph, node, nbr)
+    j_c = jc(graph, node, nbr)
+    p_a = pa(graph, node, nbr)
+    f_m = fm(graph, node, nbr)
+    print("Row {} has processed.\n".format(index))
+    return [weight, in_d, SCC, tf, j_c, p_a, f_m]
+
+
+def write_to_csv(msg):
+    csv_write.writerow(msg)
 
 
 # read file use pandas
@@ -23,86 +40,66 @@ def convert_currency(value):
         return 0
 
 
-data_file_pd = pd.read_csv("../dataset/digg_friends_format.csv", usecols=(0, 2, 3), header=None)
-# data_file_pd.apply(convert_currency)
-# The file use to write extracted features.
-output_file = open("blog_data_FM.csv", 'w')
-csv_write = csv.writer(output_file, dialect='excel')
+def in_degree(graph, node, nbr):
+    return graph.degree(nbr)
 
-vertices = list(set((data_file_pd.iloc[2]).tolist() + (data_file_pd.iloc[3]).tolist()))
-edges = []
 
-for index, row in data_file_pd.iterrows():
-    edges.append((row[2], row[3]))
+def total_friends(graph, node, nbr):
+    return len(set(list(graph.neighbors(node)) + list(graph.neighbors(nbr))))
 
-# graph.add_vertices(list(vertices))
-# graph.add_edges(edges)
-graph = nx.Graph()
-graph.add_nodes_from(vertices)
-print("Vertices: {}, and number is {}".format(vertices[:3], vertices.__len__()))
-graph.add_edges_from(edges)
-print("edges: {}, and number is {}".format(edges[:3], edges.__len__()))
-print("number of edges: {}".format(graph.number_of_edges()))
-total_edges = graph.number_of_edges()
-processed_edges = 0
 
-for index, row in data_file_pd.iterrows():
-    # feature: is-friend, friend-measure,
-    # subgraph_list = set(list(graph.neighbors(row[2])) + list(graph.neighbors(row[3])))
-    # subgraph = graph.subgraph(list(subgraph_list))
-    nbrs_node1 = list(graph.neighbors(row[2]))
-    nbrs_node2 = list(graph.neighbors(row[3]))
+def scc(graph, node, nbr):
+    subgraph_list = list(set(list(graph.neighbors(node)) + list(graph.neighbors(nbr))))
+    return nx.number_strongly_connected_components(graph.subgraph(subgraph_list).to_directed())
+
+
+def jc(graph, node, nbr):
+    for u, v, jc in nx.jaccard_coefficient(graph, [(node, nbr)]):
+        return jc
+
+
+def pa(graph, node, nbr):
+    for u, v, PA in nx.preferential_attachment(graph, [(node, nbr)]):
+        return PA
+
+
+def fm(graph, node, nbr):
+    nbrs_node1 = list(graph.neighbors(node))
+    nbrs_node2 = list(graph.neighbors(nbr))
     F_m = 0
     for node1 in nbrs_node1:
-        if node1 is not row[3]:
+        if node1 is not nbr:
             nbrs = set(graph.neighbors(node1))
             nbrs.add(node1)
             F_m += len(set(nbrs_node2).difference(nbrs))
-    csv_write.writerow([F_m])
-    # for u, v, PA in nx.preferential_attachment(graph, [(row[2], row[3])]):
-    #     csv_write.writerow([PA])
-    processed_edges += 1
-    print("{}: Node {} and {} has processed. {} edges the remaining.".format(processed_edges, row[2], row[3],
-                                                                             total_edges - processed_edges))
+    return F_m
 
-# for node, nbrs in graph.adjacency():
-#     for nbr in nbrs:
-#         # F_m = 0
-#         # for nb_nbr in graph.neighbors(nbr):
-#         #     if nb_nbr not in nbrs and not graph.edges([nbr, nb_nbr]):
-#         #         F_m += 1
-#         # feature: is-friend, in-degree, SCC, total-friends, Jaccard-coefficient, preference-attachment, friend-measure
-#         # ,
-#         #                                len(set(graph.neighbors(node) + graph.neighbors(nbr))), nx.jaccard_coefficient(graph, [node, nbr]),
-#         #                                nx.preferential_attachment(graph, [node, nbr]), F_m
-#         subgraph = list(graph.neighbors(node)) + list(graph.neighbors(nbr))
-#         try:
-#             csv_write.writerow([1, nx.degree(graph, node), nx.number_strongly_connected_components(graph.subgraph(subgraph).to_directed())])
-#             processed_edges += 1
-#             print("{}: Node {} and {} has processed. {} edges the remaining.".format(processed_edges, node, nbr, total_edges-processed_edges))
-#         except:
-#             print("Node {} has generate exception.".format(node))
-# SCCs = {}
-# for ver in graph.vs:
-#     subgraph = graph.subgraph(graph.neighbors(ver))
-#     temp_graph = {}
-#     for p in subgraph.vs:
-#         temp_graph[p["name"]] = subgraph.neighbors(p)
-#     for key in temp_graph.keys():
-#         nei = []
-#         for id in temp_graph[key]:
-#             nei.append(subgraph.vs[id]["name"])
-#         temp_graph[key] = nei
-#     print(temp_graph)
-#     SCCs[ver["name"]] = SCC(temp_graph).__len__()
-# numbers = graph.indegree()
-# print(numbers)
-# for index, row in data_file_pd.iterrows():
-#     # feature: is-friend,in-degree,
-#     try:
-#         csv_write.writerow([row[0], numbers[index]])
-#     except:
-#         print("list index {} out of range.".format(index))
-# print(graph.neighbors(5))
-# print(graph.subgraph(5))
-print("Write over.")
+
+if __name__ == '__main__':
+    data_file_pd = pd.read_csv("../operate/sample_graph.csv", usecols=(0, 1, 2), header=None)
+    # The file use to write extracted features.
+    output_file = open("blog_data_second.csv", 'w')
+    csv_write = csv.writer(output_file, dialect='excel')
+
+    vertices = list(set((data_file_pd.iloc[:, 0]).tolist() + (data_file_pd.iloc[:, 1]).tolist()))
+    edges = []
+
+    for index, row in data_file_pd.iterrows():
+        if row[2]:
+            edges.append((row[0], row[1], {'weight': row[2]}))
+
+    graph = nx.Graph()
+    graph.add_nodes_from(vertices)
+    graph.add_edges_from(edges)
+    print("number of edges: {}".format(graph.number_of_edges()))
+    # pool = Pool(6)
+    for index, row in data_file_pd.iterrows():
+        msg = fun(graph, index, row[0], row[1], row[2])
+        write_to_csv(msg)
+        # pool.apply_async(fun, (graph, index, row[0], row[1], row[2]), callback=write_to_csv)
+
+    # pool.close()
+    # pool.join()
+    output_file.close()
+
+    print("Write over.")
